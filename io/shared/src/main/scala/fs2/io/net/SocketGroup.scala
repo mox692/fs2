@@ -74,6 +74,7 @@ trait SocketGroup[F[_]] {
 private[net] object SocketGroup extends SocketGroupCompanionPlatform {
 
   private[net] abstract class AbstractAsyncSocketGroup[F[_]: Async] extends SocketGroup[F] {
+    // MEMO: なんで server メソッドだけがここで定義されてるんだk？？
     def server(
         address: Option[Host],
         port: Option[Port],
@@ -81,6 +82,7 @@ private[net] object SocketGroup extends SocketGroupCompanionPlatform {
     ): Stream[F, Socket[F]] =
       Stream
         .resource(
+          // MEMO: io/jvm-native/src/main/scala/fs2/io/net/SocketGroupPlatform.scala
           serverResource(
             address,
             port,
