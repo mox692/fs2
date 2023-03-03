@@ -58,6 +58,7 @@ sealed trait Network[F[_]]
   def tlsContext: TLSContext.Builder[F]
 }
 
+// MEMO: スレッドプールのエントリ
 object Network extends NetworkCompanionPlatform {
   private[fs2] trait UnsealedNetwork[F[_]] extends Network[F]
 

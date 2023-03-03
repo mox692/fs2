@@ -78,6 +78,7 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
       setup.evalMap(ch => connect(ch) *> Socket.forAsync(ch))
     }
 
+    // MEMO: def server を構成する基
     def serverResource(
         address: Option[Host],
         port: Option[Port],

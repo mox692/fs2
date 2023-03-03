@@ -67,6 +67,7 @@ private[net] trait NetworkPlatform[F[_]] {
 }
 
 private[net] trait NetworkCompanionPlatform { self: Network.type =>
+  // MEMO: AsynchronousChannelGroup https://docs.oracle.com/javase/jp/8/docs/api/java/nio/channels/AsynchronousChannelGroup.html
   private lazy val globalAcg = AsynchronousChannelGroup.withFixedThreadPool(
     1,
     ThreadFactories.named("fs2-global-tcp", true)
@@ -74,8 +75,10 @@ private[net] trait NetworkCompanionPlatform { self: Network.type =>
   private lazy val globalAdsg =
     AsynchronousDatagramSocketGroup.unsafe(ThreadFactories.named("fs2-global-udp", true))
 
+  // MEMO: Asyncへの実装
   implicit def forAsync[F[_]](implicit F: Async[F]): Network[F] =
     new UnsealedNetwork[F] {
+      // MEMO: 基盤となるsocketGroupを生成？
       private lazy val globalSocketGroup = SocketGroup.unsafe[F](globalAcg)
       private lazy val globalDatagramSocketGroup = DatagramSocketGroup.unsafe[F](globalAdsg)
 
