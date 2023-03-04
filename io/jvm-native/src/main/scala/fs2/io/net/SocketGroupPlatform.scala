@@ -90,6 +90,7 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
           Resource
             .make(
               Async[F].delay(
+                // MEMO: ここを随時armanのepollcatに書き換えている気がする.
                 AsynchronousServerSocketChannel.open(channelGroup)
               )
             )(sch => Async[F].delay(if (sch.isOpen) sch.close()))
@@ -111,6 +112,7 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
         def go: Stream[F, Socket[F]] = {
           def acceptChannel = Resource.makeFull[F, AsynchronousSocketChannel] { poll =>
             poll {
+              // MEMO: ここの Async ブロックはどこで使われる？？
               Async[F].async[AsynchronousSocketChannel] { cb =>
                 Async[F]
                   .delay {
