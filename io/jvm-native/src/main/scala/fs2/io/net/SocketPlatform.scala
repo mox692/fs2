@@ -103,6 +103,8 @@ private[net] trait SocketCompanionPlatform {
       _.chunks.foreach(write)
   }
 
+  // MEMO: AsynchronousSocketChannel の低レベルなAPIを呼ぶ箇所
+  // Socketの実態. readとかwriteは最終的にここのが呼ばれそう
   private final class AsyncSocket[F[_]](
       ch: AsynchronousSocketChannel,
       readMutex: Mutex[F],
@@ -111,6 +113,7 @@ private[net] trait SocketCompanionPlatform {
       extends BufferedReads[F](readMutex) {
 
     protected def readChunk(buffer: ByteBuffer): F[Int] =
+      // TODO: ここのAsyncはnotificationハンドラ内で呼ばれる？
       F.async[Int] { cb =>
         ch.read(
           buffer,
