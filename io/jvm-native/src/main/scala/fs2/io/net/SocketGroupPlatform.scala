@@ -78,7 +78,8 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
       setup.evalMap(ch => connect(ch) *> Socket.forAsync(ch))
     }
 
-    // MEMO: def server を構成する基
+    // MEMO: SocketGroup.scalaのdef server を構成する基
+    //       channelGroup に対してAsynchronousServerSocketChannel.open して非同期サーバーを構築する
     def serverResource(
         address: Option[Host],
         port: Option[Port],
@@ -113,6 +114,7 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
           def acceptChannel = Resource.makeFull[F, AsynchronousSocketChannel] { poll =>
             poll {
               // MEMO: ここの Async ブロックはどこで使われる？？
+              // sch.acceptがAsynchronousServerSocketChannelのスレッドプールで実行される(はず)だから、asyncで囲っている？
               Async[F].async[AsynchronousSocketChannel] { cb =>
                 Async[F]
                   .delay {
@@ -126,6 +128,7 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
                       }
                     )
                   }
+                  // MEMO: ここの as の挙動がちょっと謎
                   .as(Some(Async[F].delay(sch.close())))
               }
             }
@@ -139,7 +142,7 @@ private[net] trait SocketGroupCompanionPlatform { self: SocketGroup.type =>
           Stream.resource(acceptChannel.attempt).flatMap {
             case Left(_)         => Stream.empty[F]
             case Right(accepted) => Stream.eval(setOpts(accepted) *> Socket.forAsync(accepted))
-          } ++ go
+          } ++ go // TODO: // MEMO: ここで無限再起を行っている？？
         }
 
         go.handleErrorWith {
