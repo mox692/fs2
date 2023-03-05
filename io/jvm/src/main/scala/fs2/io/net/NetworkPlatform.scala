@@ -68,6 +68,7 @@ private[net] trait NetworkPlatform[F[_]] {
 
 private[net] trait NetworkCompanionPlatform { self: Network.type =>
   // MEMO: AsynchronousChannelGroup https://docs.oracle.com/javase/jp/8/docs/api/java/nio/channels/AsynchronousChannelGroup.html
+  //       コードじゃんぷはarmanの箇所に飛ぶが、実態は多分javaのほう
   private lazy val globalAcg = AsynchronousChannelGroup.withFixedThreadPool(
     1,
     ThreadFactories.named("fs2-global-tcp", true)
