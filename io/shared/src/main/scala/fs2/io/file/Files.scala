@@ -393,6 +393,7 @@ sealed trait Files[F[_]] extends FilesPlatform[F] {
     */
   def writeAll(path: Path, flags: Flags): Pipe[F, Byte, Nothing]
 
+  def writeAll2[A](path: Path, flags: Flags): Pipe[F, Byte, A]
   /** Returns a `WriteCursor` for the specified path.
     */
   def writeCursor(path: Path, flags: Flags): Resource[F, WriteCursor[F]]

@@ -399,5 +399,7 @@ private[fs2] trait FilesCompanionPlatform {
             }
           )
         }
+
+    def writeAll2[A](path: Path, flags: Flags): Pipe[F, Byte, A] = ???
   }
 }

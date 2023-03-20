@@ -53,6 +53,7 @@ object hash {
   /** Computes the digest of the source stream, emitting the digest as a chunk
     * after completion of the source stream.
     */
+  // TODO: Pipeで同じ型を返す実装を持っている例として、注目.
   private[this] def digest[F[_]](hash: => Hash): Pipe[F, Byte, Byte] =
     in =>
       Stream.suspend {
