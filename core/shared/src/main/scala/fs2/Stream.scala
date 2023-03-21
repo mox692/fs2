@@ -148,6 +148,7 @@ import Pull.StreamPullOps
   * @hideImplicitConversion PureOps
   * @hideImplicitConversion IdOps
   */
+// MEMO: Streamを作成した段階で、何かしがの underlying Pull が存在する
 final class Stream[+F[_], +O] private[fs2] (private[fs2] val underlying: Pull[F, O, Unit]) {
 
   /** Appends `s2` to the end of this stream.
@@ -4782,6 +4783,7 @@ object Stream extends StreamLowPriority {
   }
 
   /** Projection of a `Stream` providing various ways to compile a `Stream[F,O]` to a `G[...]`. */
+  // TODO: Gのtypeは何を示す？
   final class CompileOps[F[_], G[_], O] private[Stream] (
       private val underlying: Pull[F, O, Unit]
   )(implicit compiler: Compiler[F, G]) {

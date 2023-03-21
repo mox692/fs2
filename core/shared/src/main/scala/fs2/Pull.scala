@@ -627,6 +627,7 @@ object Pull extends PullLowPriority {
       def apply[X](fx: F[X]) = Pull.eval(fx)
     }
 
+  // MEMO: Pull が持つStateたち
   /* Implementation notes:
    *
    * A Pull can be one of the following:
@@ -751,6 +752,7 @@ object Pull extends PullLowPriority {
       case x => new DelegateBind(x, del)
     }
 
+  // MEMO: viewL で展開されるアクションたち.
   /* An action is an instruction that can perform effects in `F`
    * to generate by-product outputs of type `O`.
    *
@@ -883,6 +885,7 @@ object Pull extends PullLowPriority {
 
     @tailrec
     def viewL[G[_], X](free: Pull[G, X, Unit]): ViewL[G, X] =
+      // TODO: Pull がどこでこんな特徴づけされる？
       free match {
         case e: Action[G, X, Unit] =>
           contP = IdContP
