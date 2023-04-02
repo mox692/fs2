@@ -402,6 +402,7 @@ final class Stream[+F[_], +O] private[fs2] (private[fs2] val underlying: Pull[F,
     * res0: List[Chunk[Int]] = List(Chunk(1), Chunk(2, 3), Chunk(4, 5, 6))
     * }}}
     */
+  // MEMO: デフォルトでは、chunkはもとのStreamの形状を記憶している
   def chunks: Stream[F, Chunk[O]] =
     underlying.unconsFlatMap(Pull.output1).stream
 
@@ -2385,29 +2386,68 @@ final class Stream[+F[_], +O] private[fs2] (private[fs2] val underlying: Pull[F,
   /** Rechunks the stream such that output chunks are within `[inputChunk.size * minFactor, inputChunk.size * maxFactor]`.
     * The pseudo random generator is deterministic based on the supplied seed.
     */
+  // 1つのChunk
+
+  // wrong...
+  //val fiveChunks = Stream(1) ++ Stream(2) ++ Stream(3) ++ Stream(4) ++ Stream(5)
+  // fiveChunks.rechunkRandomlyWithSeed(0.1, 2.0)(5).chunks.toList == List(Chunk(1,2,3,4,5))
+
+  // 改善案
+  // * nextSize=0を防ぐ
+  //   * 
   def rechunkRandomlyWithSeed[F2[x] >: F[x]](minFactor: Double, maxFactor: Double)(
       seed: Long
   ): Stream[F2, O] =
     Stream.suspend {
       assert(maxFactor >= minFactor, "maxFactor should be greater or equal to minFactor")
       val random = new scala.util.Random(seed)
+      // factorのとる値の範囲
+      // [minFactor, (maxFactor - minFactorの剰余の最大値) + minFactor]
+      // Ex:
+      // (3,10) -> 3 ~ 9
+      // (3,33) -> 3 ~ 32
+      // (5,33) -> 5 ~ 32
+      // (1,2) -> 1 (Chunkサイズを変えない)
+      // (0.1,2) -> 0 ~ 1
       def factor: Double = Math.abs(random.nextInt()) % (maxFactor - minFactor) + minFactor
 
-      def nextSize(sourceSize: Int): Int = (factor * sourceSize).toInt
+      // headのchunkサイズをとって、それにfactorを掛けてSizeを得る
+      def nextSize(sourceSize: Int): Int = {
+        val s = if((factor * sourceSize).toInt == 0) 1 else (factor * sourceSize).toInt
+        println(s"size: ${s}")
+        s
+      }
 
+      // TODO: chukn sizeが違うStreamを扱う時が考慮されていない？ (Chunk(1,2), Chunk(3) とかは、goのloopの間でsizeOptは変えるべき)
       def go(acc: Chunk[O], sizeOpt: Int, s: Pull[F2, O, Unit]): Pull[F2, O, Unit] =
+        // TODO: ここの uncons の挙動は？ 
+        // (Stream(1,2) ++ Stream(3)).uncons => (Chunk(1,2), Chunk(3))
+        // (Stream(1,2,3)).uncons => (Chunk(1,2,3), Chunk())
         s.uncons.flatMap {
           case Some((hd, tl)) =>
-            val size = if (sizeOpt > 0) sizeOpt else nextSize(hd.size)
+            // TODO: nextSize が 0を返す可能性がある
+            val size = if (sizeOpt >= 1) sizeOpt else nextSize(hd.size)
             if (acc.size < size)
               go(acc ++ hd, size, tl)
             else if (acc.size == size)
               Pull.output(acc) >> go(hd, size, tl)
             else {
-              val (out, rem) = acc.splitAt(size - 1)
+              // TODO: ここでsizeが1だとまずい
+              val (out, rem) = if (size == 1 ) acc.splitAt(1) else acc.splitAt(size - 1)
+              // >> は、 前半のPullを実行した後に、後半のPullを実行する (？)
+              // Pull.output は、Chunkを最終的にStreamに流す時に使うイメージ
+
+              // Pull.flatMapのdocsより、
+              //  * The composed pull emits all outputs emitted by `this` pull,
+              //  * and if successful will start emitting the outputs from the generated pull.
+              // なので、flatMapとしては左辺の結果は使わないが、Streamの結果としては出力されるようになっている
+              // それが確認できる例
+              //   (Pull.output[Pure, Int](Chunk(1)) >> Pull.output[Pure, Int](Chunk(3))).stream.chunks.toList
+              //      res127: List[fs2.Chunk[Int]] = List(Chunk(1), Chunk(3))
               Pull.output(out) >> go(rem ++ hd, -1, tl)
             }
           case None =>
+            // MEMO: 終了
             Pull.output(acc)
         }
 

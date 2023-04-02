@@ -141,6 +141,9 @@ sealed abstract class Pull[+F[_], +O, +R] {
     * `post` pull starts running on the same scope in which `this` pull ended,
     * and the composed pull will end on the same scope in which `post` pull does.
     */
+
+  // The composed pull emits all outputs emitted by `this` pull,
+  // ここがちょっと複雑??
   def flatMap[F2[x] >: F[x], O2 >: O, R2](f: R => Pull[F2, O2, R2]): Pull[F2, O2, R2] =
     new Bind[F2, O2, R, R2](this) {
       def cont(e: Terminal[R]): Pull[F2, O2, R2] =
