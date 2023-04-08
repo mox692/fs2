@@ -54,6 +54,7 @@ final case class ReadCursor[F[_]](file: FileHandle[F], offset: Long) {
   ): G[Option[(ReadCursor[F], Chunk[Byte])]] =
     u(file.read(chunkSize, offset)).map {
       _.map { chunk =>
+        // MEMO: ここで新しいReadCursorを生成してoffsetを更新している
         val next = ReadCursor(file, offset + chunk.size)
         (next, chunk)
       }
